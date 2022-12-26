@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Command">
+    <Text>RBA_Session-05_Challenge</Text>
+    <Description>Some description for RBA_Session-05_Challenge</Description>
+    <Assembly>RBA_Session-05_Challenge.dll</Assembly>
+    <FullClassName>RBA_Session_05_Challenge.Command</FullClassName>
+    <ClientId>76476905-a90a-456f-a6ae-9c2e2f6e908d</ClientId>
+    <VendorId>T Edward</VendorId>
+    <VendorDescription>T Edward Coder</VendorDescription>
+  </AddIn>
+  <AddIn Type="Application">
+    <Name>Application RBA_Session-05_Challenge</Name>
+    <Assembly>RBA_Session-05_Challenge.dll</Assembly>
+    <FullClassName>RBA_Session_05_Challenge.App</FullClassName>
+    <ClientId>ddfebadd-ce61-4e81-833c-ca75cfc56a9b</ClientId>
+    <VendorId>T Edward</VendorId>
+    <VendorDescription>T Edward Coder</VendorDescription>
+  </AddIn>
+</RevitAddIns>
