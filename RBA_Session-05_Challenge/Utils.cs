@@ -76,5 +76,17 @@ namespace RBA_Session_05_Challenge
 
             return null;
         }
+
+        internal static void SetParameterByName(Element element, string paramName, int value)
+        {
+            IList<Parameter> paramList = element.GetParameters(paramName);
+
+            if (paramList != null)
+            {
+                Parameter param = paramList[0];
+
+                param.Set(value);
+            }          
+        }
     }
 }

@@ -53,19 +53,48 @@ namespace RBA_Session_05_Challenge
             FilteredElementCollector colRooms = new FilteredElementCollector(doc);
             colRooms.OfCategory(BuiltInCategory.OST_Rooms);
 
-            foreach (SpatialElement room in colRooms)
+            using (Transaction t = new Transaction(doc))                
             {
-                string furnSet = Utils.GetParameterValueByName(room, "Furniture Set");
-                Debug.Print(furnSet);
+                t.Start("Insert Desk family");
 
-                LocationPoint roomLocation = room.Location as LocationPoint;
-                XYZ inspoint = roomLocation.Point;
+                foreach (SpatialElement room in colRooms)
+                {
+                    int counter = 0;
+                    
+                    string furnSet = Utils.GetParameterValueByName(room, "Furniture Set");
+                    Debug.Print(furnSet);
 
-                FamilySymbol curFS = Utils.GetFamilySymbolByName(doc, "Desk", "60in x 30in");
+                    LocationPoint roomLocation = room.Location as LocationPoint;
+                    XYZ inspoint = roomLocation.Point;
 
-                FamilyInstance instance = doc.Create.NewFamilyInstance(inspoint,
-                    curFS, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
-            }
+                    foreach(FurnitureSet curSet in furnitureSetList)
+                    {
+                        if(curSet.Set == furnSet)
+                        {
+                            foreach(string furnPiece in curSet.Furniture)
+                            {
+                                foreach(FurnitureType curType in furnitureTypeList)
+                                {
+                                    if(curType.Name == furnPiece.Trim())
+                                    {
+                                        FamilySymbol curFS = Utils.GetFamilySymbolByName(doc,
+                                            curType.Family, curType.Type);
+                                        curFS.Activate();
+
+                                        FamilyInstance instance = doc.Create.NewFamilyInstance(inspoint,
+                                            curFS, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                        counter++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Utils.SetParameterByName(room, "Furniture Count", counter);
+                }
+
+                t.Commit();
+            }                
 
             return Result.Succeeded;
         }
