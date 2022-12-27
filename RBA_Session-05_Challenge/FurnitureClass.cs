@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Autodesk.Revit.DB;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -30,7 +31,21 @@ namespace RBA_Session_05_Challenge
             Name = name;
             Family = family;
             Type = type;
-        } 
+        }
+
+        internal static FamilySymbol GetFamilySymbolByName(Document doc, string familyName, string typeName)
+        {
+            FilteredElementCollector collector = new FilteredElementCollector(doc);
+            collector.OfClass(typeof(FamilySymbol));
+
+            foreach (FamilySymbol curFS in collector)
+            {
+                if (curFS.Name == typeName && curFS.FamilyName == familyName)
+                    return curFS;
+            }
+
+            return null;
+        }
     }
 
 }
