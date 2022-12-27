@@ -48,6 +48,8 @@ namespace RBA_Session_05_Challenge
             furnitureTypeList.RemoveAt(0);
             furnitureSetList.RemoveAt(0);
 
+            int overallCounter = 0;
+
             // Part 2) get rooms, loop through rooms & insert correct furniture
 
             FilteredElementCollector colRooms = new FilteredElementCollector(doc);
@@ -84,6 +86,7 @@ namespace RBA_Session_05_Challenge
                                         FamilyInstance instance = doc.Create.NewFamilyInstance(inspoint,
                                             curFS, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                                         counter++;
+                                        overallCounter++;
                                     }
                                 }
                             }
@@ -94,7 +97,9 @@ namespace RBA_Session_05_Challenge
                 }
 
                 t.Commit();
-            }                
+            }
+
+            TaskDialog.Show("Complete", "Inserted " + overallCounter.ToString() + " pieces of furniture");
 
             return Result.Succeeded;
         }
