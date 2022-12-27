@@ -25,6 +25,8 @@ namespace RBA_Session_05_Challenge
             Application app = uiapp.Application;
             Document doc = uidoc.Document;
 
+            // Part 1) get data ino list of classes
+
             List<string[]> furnitureTypes = Utils.GetFurnitureTypes();
             List<string[]> furnitureSets= Utils.GetFurnitureSets();
 
@@ -41,6 +43,28 @@ namespace RBA_Session_05_Challenge
             {
                 FurnitureSet curType = new FurnitureSet(furSet[0], furSet[1], furSet[2]);
                 furnitureSetList.Add(curType);
+            }
+
+            furnitureTypeList.RemoveAt(0);
+            furnitureSetList.RemoveAt(0);
+
+            // Part 2) get rooms, loop through rooms & insert correct furniture
+
+            FilteredElementCollector colRooms = new FilteredElementCollector(doc);
+            colRooms.OfCategory(BuiltInCategory.OST_Rooms);
+
+            foreach (SpatialElement room in colRooms)
+            {
+                string furnSet = Utils.GetParameterValueByName(room, "Furniture Set");
+                Debug.Print(furnSet);
+
+                LocationPoint roomLocation = room.Location as LocationPoint;
+                XYZ inspoint = roomLocation.Point;
+
+                FamilySymbol curFS = Utils.GetFamilySymbolByName(doc, "Desk", "60in x 30in");
+
+                FamilyInstance instance = doc.Create.NewFamilyInstance(inspoint,
+                    curFS, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
             }
 
             return Result.Succeeded;
