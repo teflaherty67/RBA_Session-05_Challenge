@@ -7,10 +7,15 @@ using Autodesk.Revit.UI.Selection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using Forms = System.Windows.Forms;
+using Excel = OfficeOpenXml;
+using OfficeOpenXml;
+using RBA_Session_05_Challenge;
 
 #endregion
 
-namespace RBA_Session_05_Challenge
+namespace RAB_Session_05_Challenge
 {
     [Transaction(TransactionMode.Manual)]
     public class Command : IExternalCommand
@@ -23,68 +28,106 @@ namespace RBA_Session_05_Challenge
             UIApplication uiapp = commandData.Application;
             UIDocument uidoc = uiapp.ActiveUIDocument;
             Application app = uiapp.Application;
-            Document doc = uidoc.Document;
+            Document doc = uidoc.Document;           
 
-            // Part 1) get data ino list of classes
+            // prompt user to select Excel file
 
-            List<string[]> furnitureTypes = Utils.GetFurnitureTypes();
-            List<string[]> furnitureSets= Utils.GetFurnitureSets();
+            Forms.OpenFileDialog selectFile = new Forms.OpenFileDialog();
+            selectFile.Filter = "Excel files|*.xls;*.xlsx;*.xlsm";
+            selectFile.InitialDirectory = "S:\\";
+            selectFile.Multiselect = false;
 
-            List<FurnitureType> furnitureTypeList = new List<FurnitureType>();
-            List<FurnitureSet> furnitureSetList = new List<FurnitureSet>();
+            string excelFile = "";
 
-            foreach (string[] furType in furnitureTypes)
+            if (selectFile.ShowDialog() == Forms.DialogResult.OK)
+                excelFile = selectFile.FileName;
+
+            if (excelFile == "")
             {
-                FurnitureType curType = new FurnitureType(furType[0], furType[1], furType[2]);
-                furnitureTypeList.Add(curType);                
+                TaskDialog.Show("Error", "Please select an Excel file.");
+                return Result.Failed;
             }
 
-            foreach (string[] furSet in furnitureSets)
+            // set EPPlus license context
+
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            // open Excel file
+
+            ExcelPackage excel = new ExcelPackage(excelFile);
+            ExcelWorkbook workbook = excel.Workbook;
+            ExcelWorksheet setWS = workbook.Worksheets[0];
+            ExcelWorksheet typeWS = workbook.Worksheets[1];
+
+            // get row and column count
+
+            int setRows = setWS.Dimension.Rows;
+            int typeRows = typeWS.Dimension.Rows;
+
+            // get data into list of classes
+
+            List<FurnitureType> furnTypeList = new List<FurnitureType>();
+            List<FurnitureSet> furnSetList = new List<FurnitureSet>();
+
+            for (int i = 1; i <= setRows; i++)
             {
-                FurnitureSet curType = new FurnitureSet(furSet[0], furSet[1], furSet[2]);
-                furnitureSetList.Add(curType);
+                string setName = setWS.Cells[i, 1].Value.ToString();
+                string setRoom = setWS.Cells[i, 2].Value.ToString();
+                string setFurn = setWS.Cells[i, 3].Value.ToString();
+
+                FurnitureSet curSet = new FurnitureSet(setName, setRoom, setFurn);
+                furnSetList.Add(curSet);
             }
 
-            furnitureTypeList.RemoveAt(0);
-            furnitureSetList.RemoveAt(0);
+            for (int j = 1; j <= typeRows; j++)
+            {
+                string typeName = typeWS.Cells[j, 1].Value.ToString();
+                string typeFamily = typeWS.Cells[j, 2].Value.ToString();
+                string typeType = typeWS.Cells[j, 3].Value.ToString();
+
+                FurnitureType curType = new FurnitureType(typeName, typeFamily, typeType);
+                furnTypeList.Add(curType);
+            }
+
+            furnTypeList.RemoveAt(0);
+            furnSetList.RemoveAt(0);
 
             int overallCounter = 0;
 
-            // Part 2) get rooms, loop through rooms & insert correct furniture
+            // get rooms, loop through & insert correct furniture
 
             FilteredElementCollector colRooms = new FilteredElementCollector(doc);
             colRooms.OfCategory(BuiltInCategory.OST_Rooms);
 
-            using (Transaction t = new Transaction(doc))                
+            using (Transaction t = new Transaction(doc))
             {
-                t.Start("Insert Desk family");
+                t.Start("Insert furniture sets");
 
                 foreach (SpatialElement room in colRooms)
                 {
                     int counter = 0;
-                    
+
                     string furnSet = Utils.GetParameterValueByName(room, "Furniture Set");
-                    Debug.Print(furnSet);
 
                     LocationPoint roomLocation = room.Location as LocationPoint;
-                    XYZ inspoint = roomLocation.Point;
+                    XYZ insPoint = roomLocation.Point;
 
-                    foreach(FurnitureSet curSet in furnitureSetList)
+                    foreach (FurnitureSet curSet in furnSetList)
                     {
-                        if(curSet.Set == furnSet)
+                        if (curSet.Set == furnSet)
                         {
-                            foreach(string furnPiece in curSet.Furniture)
+                            foreach (string furnPiece in curSet.Furniture)
                             {
-                                foreach(FurnitureType curType in furnitureTypeList)
+                                foreach (FurnitureType curType in furnTypeList)
                                 {
-                                    if(curType.Name == furnPiece.Trim())
+                                    if (curType.Name == furnPiece.Trim())
                                     {
-                                        FamilySymbol curFS = Utils.GetFamilySymbolByName(doc,
-                                            curType.Family, curType.Type);
-                                        curFS.Activate();
+                                        FamilySymbol curFS = Utils.GetFamilySymbolByName(doc, curType.Family, curType.Type);
 
-                                        FamilyInstance instance = doc.Create.NewFamilyInstance(inspoint,
-                                            curFS, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                                        if (curFS.IsActive == false)
+                                            curFS.Activate();
+
+                                        FamilyInstance instance = doc.Create.NewFamilyInstance(insPoint, curFS, Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
                                         counter++;
                                         overallCounter++;
                                     }
@@ -99,7 +142,7 @@ namespace RBA_Session_05_Challenge
                 t.Commit();
             }
 
-            TaskDialog.Show("Complete", "Inserted " + overallCounter.ToString() + " pieces of furniture");
+            TaskDialog.Show("complete", "Inserted " + overallCounter.ToString() + " pieces of furniture.");
 
             return Result.Succeeded;
         }
